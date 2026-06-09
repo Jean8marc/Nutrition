@@ -605,12 +605,17 @@ class ProfilPage(ctk.CTkFrame):
                     row=0, column=3, padx=4)
 
     def _draw_chart(self, data):
+        from datetime import datetime as _dt
         poids_vals  = [d['poids'] for d in data]
         taille_vals = [d.get('tour_de_taille') or 0 for d in data]
         has_taille  = any(t > 0 for t in taille_vals)
 
-        # Dates ou étiquettes
-        labels = [d['date'][:10] if len(d['date']) == 10 else d['date'] for d in data]
+        # Axe X en vraies dates matplotlib
+        raw_labels = [d['date'][:10] for d in data]
+        try:
+            x_hist = [mdates.date2num(_dt.strptime(lb, "%Y-%m-%d")) for lb in raw_labels]
+        except ValueError:
+            x_hist = list(range(len(raw_labels)))
 
         plt.rcParams.update({
             'figure.facecolor': T["bg_card"],
@@ -632,53 +637,89 @@ class ProfilPage(ctk.CTkFrame):
             ax2 = None
             fig.patch.set_facecolor(T["bg_card"])
 
-        # Courbe poids
-        x = list(range(len(labels)))
-        ax1.plot(x, poids_vals, color=T["blue"], linewidth=2.5,
+        # Courbe poids historique
+        ax1.plot(x_hist, poids_vals, color=T["blue"], linewidth=2.5,
                  marker="o", markersize=4, markerfacecolor=T["blue_l"])
-        ax1.fill_between(x, poids_vals,
-                          [min(poids_vals) - 0.5] * len(poids_vals),
-                          color=T["blue"], alpha=0.12)
+        ax1.fill_between(x_hist, poids_vals,
+                         [min(poids_vals) - 0.5] * len(poids_vals),
+                         color=T["blue"], alpha=0.12)
 
-        # Ligne objectif
-        user = db.get_current_user()
-        target = float(user.get('poids_cible') or 0)
+        # Projection
+        proj   = db.get_projection_poids()
+        target = proj.get("poids_cible", 0.0)
+
+        if proj.get("has_cible") and proj.get("points"):
+            pts    = proj["points"]
+            x_proj = [mdates.date2num(_dt.strptime(p["date"], "%Y-%m-%d")) for p in pts]
+            y_proj = [p["poids"] for p in pts]
+            # Relier depuis le dernier point historique
+            x_proj = [x_hist[-1]] + x_proj
+            y_proj = [poids_vals[-1]] + y_proj
+
+            ax1.plot(x_proj, y_proj, color=T["ac"], linewidth=1.8,
+                     linestyle="--", alpha=0.85, label="Projection")
+            ax1.fill_between(x_proj,
+                             [y - 0.5 for y in y_proj],
+                             [y + 0.5 for y in y_proj],
+                             color=T["ac"], alpha=0.07)
+            ax1.plot(x_proj[-1], y_proj[-1], marker="*", markersize=10,
+                     color=T["ac"], zorder=5)
+            date_atteinte = proj.get("date_atteinte", "")
+            if date_atteinte:
+                date_courte = _dt.strptime(date_atteinte, "%Y-%m-%d").strftime("%b %Y")
+                ax1.annotate(f"~{date_courte}",
+                             xy=(x_proj[-1], y_proj[-1]),
+                             xytext=(0, 10), textcoords="offset points",
+                             fontsize=8, color=T["ac"], ha="center")
+
+        # Ligne objectif (pointillée fine pour ne pas écraser la projection)
         if target > 0:
-            ax1.axhline(y=target, color=T["ac"], linewidth=1.5,
-                        linestyle="--", alpha=0.8,
+            ax1.axhline(y=target, color=T["ac"], linewidth=1.2,
+                        linestyle=":", alpha=0.5,
                         label=f"Objectif : {target} kg")
-            ax1.legend(fontsize=8, framealpha=0.3, facecolor=T["bg_el"],
-                       labelcolor=T["tx1"])
 
+        ax1.legend(fontsize=8, framealpha=0.3, facecolor=T["bg_el"],
+                   labelcolor=T["tx1"])
         ax1.set_ylabel("Poids (kg)", fontsize=9, color=T["tx2"])
         ax1.grid(True)
         ax1.set_facecolor(T["bg_row"])
 
-        # Courbe tour de taille
+        # Tour de taille
         if ax2 is not None:
-            non_zero = [(i,t) for i,t in enumerate(taille_vals) if t > 0]
+            non_zero = [(xi, t) for xi, t in zip(x_hist, taille_vals) if t > 0]
             if non_zero:
-                xi, ti = zip(*non_zero)
-                ax2.plot(list(xi), list(ti), color=T["lip"], linewidth=2,
+                xi_l, ti_l = zip(*non_zero)
+                ax2.plot(list(xi_l), list(ti_l), color=T["lip"], linewidth=2,
                          marker="s", markersize=4, markerfacecolor="#fbbf24")
-                ax2.fill_between(list(xi), list(ti),
-                                  [min(ti) - 0.5] * len(ti),
-                                  color=T["lip"], alpha=0.10)
+                ax2.fill_between(list(xi_l), list(ti_l),
+                                 [min(ti_l) - 0.5] * len(ti_l),
+                                 color=T["lip"], alpha=0.10)
             ax2.set_ylabel("Tour de taille (cm)", fontsize=9, color=T["tx2"])
             ax2.grid(True)
             ax2.set_facecolor(T["bg_row"])
 
-        # Axe X : afficher N étiquettes
-        step = max(1, len(labels) // 8)
-        ax1.set_xticks(x[::step])
-        ax1.set_xticklabels(labels[::step], rotation=30, fontsize=8)
+        # Axe X en dates réelles
+        ax1.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=8))
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
+        fig.autofmt_xdate(rotation=30)
+        for tick in ax1.xaxis.get_major_ticks():
+            tick.label1.set_fontsize(8)
 
         fig.tight_layout(pad=1.2)
-
         canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=8, pady=8)
         plt.close(fig)
+
+        # Message si pas de poids cible
+        if not proj.get("has_cible"):
+            ctk.CTkLabel(
+                self.chart_frame,
+                text="Définissez un poids cible dans Profil > Informations\npour voir la projection",
+                font=ctk.CTkFont(size=9),
+                text_color=T["tx2"],
+                justify="center",
+            ).pack(pady=(0, 8))
 
     def _refresh_bilan(self):
         for w in self.bilan_scroll.winfo_children():
