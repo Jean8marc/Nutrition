@@ -3,7 +3,7 @@ NutriTrack Pro — Tableau de bord
 """
 import customtkinter as ctk
 import database as db
-from datetime import date
+from datetime import date, datetime
 from widgets import MacroRing
 from theme import T
 
@@ -11,6 +11,7 @@ try:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     MPL_OK = True
 except ImportError:
@@ -346,9 +347,6 @@ class DashboardPage(ctk.CTkScrollableFrame):
         })
 
         # ── Carte progression poids ──────────────────────────────
-        from datetime import datetime as _dt
-        import matplotlib.dates as _mdates
-
         proj       = db.get_projection_poids()
         poids_data = db.get_suivi_poids(limit=90, frequence="tous")
         titre_pc   = "📈  Progression vers l'objectif" if proj.get("has_cible") else "⚖️  Poids — 90 derniers jours"
@@ -361,7 +359,7 @@ class DashboardPage(ctk.CTkScrollableFrame):
             chart_p.grid_propagate(False)
 
             try:
-                x_hist    = [_mdates.date2num(_dt.strptime(d['date'][:10], "%Y-%m-%d"))
+                x_hist    = [mdates.date2num(datetime.strptime(d['date'][:10], "%Y-%m-%d"))
                                for d in poids_data]
                 _dates_ok = True
             except ValueError:
@@ -379,7 +377,7 @@ class DashboardPage(ctk.CTkScrollableFrame):
             # Projection plafonnée à 26 semaines (6 mois) pour la carte compacte
             if proj.get("has_cible") and proj.get("points") and _dates_ok:
                 pts    = proj["points"][:26]
-                x_proj = [_mdates.date2num(_dt.strptime(p["date"], "%Y-%m-%d")) for p in pts]
+                x_proj = [mdates.date2num(datetime.strptime(p["date"], "%Y-%m-%d")) for p in pts]
                 y_proj = [p["poids"] for p in pts]
                 x_proj = [x_hist[-1]] + x_proj
                 y_proj = [ys[-1]] + y_proj
@@ -394,8 +392,8 @@ class DashboardPage(ctk.CTkScrollableFrame):
                            linestyle=":", alpha=0.7)
 
             if _dates_ok:
-                ax.xaxis.set_major_locator(_mdates.AutoDateLocator(maxticks=6))
-                ax.xaxis.set_major_formatter(_mdates.DateFormatter("%d/%m"))
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=6))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
                 fig.autofmt_xdate(rotation=30)
             else:
                 step = max(1, len(poids_data) // 6)
@@ -430,11 +428,11 @@ class DashboardPage(ctk.CTkScrollableFrame):
                                  font=ctk.CTkFont(size=11, weight="bold"),
                                  text_color=T["ac"]).grid(row=0, column=1, sticky="e")
 
-                signe       = "−" if proj["deficit_jour"] < 0 else "+"
+                signe       = "−" if proj.get("deficit_jour", 0) < 0 else "+"
                 deficit_abs = abs(int(proj.get("deficit_jour", 0)))
                 source_lbl  = " (prog.)" if proj.get("source") == "programme" else ""
                 ctk.CTkLabel(pc,
-                             text=f"{signe}{deficit_abs} kcal/j{source_lbl}  ·  {proj['kg_par_semaine']:+.2f} kg/sem",
+                             text=f"{signe}{deficit_abs} kcal/j{source_lbl}  ·  {proj.get('kg_par_semaine', 0.0):+.2f} kg/sem",
                              font=ctk.CTkFont(size=10),
                              text_color=T["tx2"]).grid(
                     row=3, column=0, padx=12, pady=(0, 10), sticky="w")
