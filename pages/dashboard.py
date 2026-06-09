@@ -450,8 +450,16 @@ class DashboardPage(ctk.CTkScrollableFrame):
             ctk.CTkLabel(pc,
                          text="Enregistrez votre poids\ndans Mon Profil pour voir la courbe",
                          font=ctk.CTkFont(size=11), text_color=T["tx2"],
-                         justify="center").grid(row=1, column=0, pady=30)
-            _spacer(pc, 2)
+                         justify="center").grid(row=1, column=0, pady=(30, 4))
+            if not proj.get("has_cible"):
+                ctk.CTkLabel(pc,
+                             text="Définissez un poids cible dans Mon Profil",
+                             font=ctk.CTkFont(size=10),
+                             text_color=T["tx2"]).grid(
+                    row=2, column=0, padx=12, pady=(0, 10))
+                _spacer(pc, 3)
+            else:
+                _spacer(pc, 2)
 
         # ── Courbe calories journal 14 jours ─────────────────────
         cc = _card(self.charts_row, "📓  Calories journal — 14 derniers jours")
