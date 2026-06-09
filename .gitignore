@@ -1,0 +1,29 @@
+# Données utilisateur et base de données
+nutrition.db
+off_cache.db
+
+# Téléchargements lourds (CSV Open Food Facts ~12 Go)
+Telechargement/
+
+# Sauvegardes DB
+Sauvegarde/
+
+# Config locale (peut contenir des clés API)
+config.json
+
+# Logs
+nutritrack.log
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp

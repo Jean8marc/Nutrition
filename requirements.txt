@@ -1,0 +1,20 @@
+# NutriTrack Pro — dépendances Python
+# Installer : pip install -r requirements.txt
+
+# Requis
+customtkinter>=5.2.0
+Pillow>=10.0.0
+
+# Recommandés (activent des fonctionnalités supplémentaires)
+matplotlib>=3.7.0
+requests>=2.31.0
+
+# Optionnels — scan par code-barres caméra
+# opencv-python>=4.8.0
+# pyzbar>=0.1.9
+
+# Optionnel — analyse photo IA
+# anthropic>=0.40.0
+
+# Optionnel — export PDF natif (sinon export HTML disponible)
+# reportlab>=4.0.0

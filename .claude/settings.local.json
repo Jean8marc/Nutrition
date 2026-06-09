@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('database.py', encoding='utf-8-sig'\\).read\\(\\)\\); ast.parse\\(open\\('pages/profil.py', encoding='utf-8-sig'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); import database as db; db.init_db\\(\\); from datetime import date, timedelta; lundi = date.today\\(\\) - timedelta\\(days=date.today\\(\\).weekday\\(\\)\\); data = db.get_rapport_semaine\\(lundi.isoformat\\(\\)\\); print\\('Semaine:', data['semaine_label']\\); print\\('Jours:', len\\(data['jours']\\)\\); print\\('Sport:', data['sport']['nb_seances']\\); print\\('Adherence:', data['adherence']['pct'], '%'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('rapport.py', encoding='utf-8-sig'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); import database as db, rapport as rp; db.init_db\\(\\); from datetime import date, timedelta; lundi = date.today\\(\\) - timedelta\\(days=date.today\\(\\).weekday\\(\\)\\); data = db.get_rapport_semaine\\(lundi.isoformat\\(\\)\\); path = rp.generer_rapport_html\\(data\\); import os; print\\('Rapport:', path\\); print\\('Size:', os.path.getsize\\(path\\), 'bytes'\\)\")",
+      "Bash(python *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(del *)",
+      "PowerShell(Remove-Item *)",
+      "Bash(not exist *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Start-Process python -ArgumentList \"main.py\" -WorkingDirectory \"D:\\\\DEV\\\\Python\\\\proteines\\\\nutrition_app_v7\" -PassThru | Select-Object Id, ProcessName)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Start-Process python -ArgumentList \"main.py\" -WorkingDirectory \"D:\\\\DEV\\\\Python\\\\proteines\\\\nutrition_app_v7\" -PassThru)",
+      "PowerShell(python -c \"import requests; print\\('requests OK:', requests.__version__\\)\" 2>&1; python --version)",
+      "PowerShell(Add-Type -AssemblyName System.Windows.Forms; $bmp = [System.Drawing.Bitmap]::new\\([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\([System.Drawing.Point]::Empty, [System.Drawing.Point]::Empty, $bmp.Size\\); $path = \"$env:TEMP\\\\nutritrack_screen.png\"; $bmp.Save\\($path\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output $path)",
+      "PowerShell(Start-Process python -ArgumentList \"launch.py\" -WorkingDirectory \"D:\\\\DEV\\\\Python\\\\proteines\\\\nutrition_app_v7\" -WindowStyle Normal; Start-Sleep 5; Add-Type -AssemblyName System.Windows.Forms; $bmp = [System.Drawing.Bitmap]::new\\([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width,[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height\\); $g=[System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\([System.Drawing.Point]::Empty,[System.Drawing.Point]::Empty,$bmp.Size\\); $bmp.Save\\(\"$env:TEMP\\\\nt2.png\"\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output \"$env:TEMP\\\\nt2.png\")",
+      "PowerShell(Add-Type -AssemblyName System.Windows.Forms; $bmp = [System.Drawing.Bitmap]::new\\([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width,[System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height\\); $g=[System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\([System.Drawing.Point]::Empty,[System.Drawing.Point]::Empty,$bmp.Size\\); $bmp.Save\\(\"$env:TEMP\\\\nt3.png\"\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output \"$env:TEMP\\\\nt3.png\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bunx -y ccstatusline@latest",
+    "padding": 0,
+    "refreshInterval": 10
+  }
+}
