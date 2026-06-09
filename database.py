@@ -2314,8 +2314,12 @@ def get_projection_poids() -> dict:
     has_cible   = poids_cible > 0
 
     # Poids de départ : dernier suivi_poids ou valeur du profil
-    recents      = get_suivi_poids(limit=1, frequence="tous")
-    poids_actuel = float(recents[0]["poids"]) if recents else float(profil.get("poids") or 70)
+    _conn        = get_connection()
+    _row         = _conn.execute(
+        "SELECT poids FROM suivi_poids WHERE user_id=? ORDER BY date DESC LIMIT 1",
+        (_current_user_id,)
+    ).fetchone()
+    poids_actuel = float(_row["poids"]) if _row else float(profil.get("poids") or 70)
 
     if not has_cible:
         return {**_empty, "poids_actuel": round(poids_actuel, 1)}
@@ -2348,7 +2352,7 @@ def get_projection_poids() -> dict:
         "has_cible":      True,
         "poids_actuel":   round(poids_actuel, 1),
         "poids_cible":    poids_cible,
-        "deficit_jour":   round(deficit_jour, 0),
+        "deficit_jour":   int(round(deficit_jour)),
         "kg_par_semaine": round(kg_par_semaine, 3),
         "source":         source,
     }
