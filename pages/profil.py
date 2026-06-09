@@ -613,9 +613,11 @@ class ProfilPage(ctk.CTkFrame):
         # Axe X en vraies dates matplotlib
         raw_labels = [d['date'][:10] for d in data]
         try:
-            x_hist = [mdates.date2num(_dt.strptime(lb, "%Y-%m-%d")) for lb in raw_labels]
+            x_hist    = [mdates.date2num(_dt.strptime(lb, "%Y-%m-%d")) for lb in raw_labels]
+            _dates_ok = True
         except ValueError:
-            x_hist = list(range(len(raw_labels)))
+            x_hist    = list(range(len(raw_labels)))
+            _dates_ok = False
 
         plt.rcParams.update({
             'figure.facecolor': T["bg_card"],
@@ -698,10 +700,15 @@ class ProfilPage(ctk.CTkFrame):
             ax2.grid(True)
             ax2.set_facecolor(T["bg_row"])
 
-        # Axe X en dates réelles
-        ax1.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=8))
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
-        fig.autofmt_xdate(rotation=30)
+        # Axe X
+        if _dates_ok:
+            ax1.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=8))
+            ax1.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
+            fig.autofmt_xdate(rotation=30)
+        else:
+            step = max(1, len(raw_labels) // 8)
+            ax1.set_xticks(x_hist[::step])
+            ax1.set_xticklabels(raw_labels[::step], rotation=30, fontsize=8)
         for tick in ax1.xaxis.get_major_ticks():
             tick.label1.set_fontsize(8)
 
