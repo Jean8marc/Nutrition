@@ -2294,6 +2294,91 @@ def apply_reequilibrage(new_calories: int):
     conn.close()
 
 
+def get_projection_poids() -> dict:
+    """
+    Projette la courbe de poids jusqu'au poids cible.
+    Déficit basé sur le journal réel (si >= 7 jours de données) ou le programme actif.
+    Retourne une série de points hebdomadaires depuis aujourd'hui.
+    """
+    _empty = {
+        "has_cible": False, "poids_actuel": 0.0, "poids_cible": 0.0,
+        "deficit_jour": 0.0, "kg_par_semaine": 0.0, "source": "none",
+        "date_atteinte": None, "jours_restants": None, "points": [],
+    }
+
+    profil = get_current_user()
+    if not profil:
+        return _empty
+
+    poids_cible = float(profil.get("poids_cible") or 0)
+    has_cible   = poids_cible > 0
+
+    # Poids de départ : dernier suivi_poids ou valeur du profil
+    recents      = get_suivi_poids(limit=1, frequence="tous")
+    poids_actuel = float(recents[0]["poids"]) if recents else float(profil.get("poids") or 70)
+
+    if not has_cible:
+        return {**_empty, "poids_actuel": round(poids_actuel, 1)}
+
+    # TDEE en mode maintien
+    tdee = calc_calories_cible({**dict(profil), "objectif": "maintien"})
+
+    # Source du déficit : journal réel si >= 7 jours, sinon programme
+    adherence = get_adherence_stats(90)
+    if adherence.get("jours", 0) >= 7:
+        deficit_jour = float(adherence["avg_cal"]) - tdee
+        source       = "journal"
+    else:
+        prog = get_programme_actif()
+        if prog:
+            deficit_jour = int(prog["calories_jour"]) - tdee
+            source       = "programme"
+        else:
+            deficit_jour = 0.0
+            source       = "none"
+
+    kg_par_semaine = deficit_jour * 7 / 7700
+
+    # Direction correcte ?
+    en_perte    = poids_cible < poids_actuel
+    en_prise    = poids_cible > poids_actuel
+    bonne_dir   = (en_perte and kg_par_semaine < 0) or (en_prise and kg_par_semaine > 0)
+
+    base = {
+        "has_cible":      True,
+        "poids_actuel":   round(poids_actuel, 1),
+        "poids_cible":    poids_cible,
+        "deficit_jour":   round(deficit_jour, 0),
+        "kg_par_semaine": round(kg_par_semaine, 3),
+        "source":         source,
+    }
+
+    if kg_par_semaine == 0 or not bonne_dir:
+        return {**base, "date_atteinte": None, "jours_restants": None, "points": []}
+
+    # Objectif déjà atteint
+    if (en_perte and poids_actuel <= poids_cible) or (en_prise and poids_actuel >= poids_cible):
+        today_str = date.today().isoformat()
+        return {**base, "date_atteinte": today_str, "jours_restants": 0,
+                "points": [{"date": today_str, "poids": round(poids_actuel, 1)}]}
+
+    # Projection semaine par semaine (max 52 semaines)
+    today  = date.today()
+    points = []
+    for i in range(1, 53):
+        poids_proj = round(poids_actuel + kg_par_semaine * i, 2)
+        pt_date    = today + timedelta(weeks=i)
+        points.append({"date": pt_date.isoformat(), "poids": poids_proj})
+        if (en_perte and poids_proj <= poids_cible) or (en_prise and poids_proj >= poids_cible):
+            break
+
+    date_atteinte = points[-1]["date"] if points else None
+    jours_restants = (date.fromisoformat(date_atteinte) - today).days if date_atteinte else None
+
+    return {**base, "date_atteinte": date_atteinte, "jours_restants": jours_restants,
+            "points": points}
+
+
 # ─────────────────────────── SUIVI EAU ───────────────────────────────────────
 
 def add_eau(ml: int, date_str: str = None, notes: str = "") -> int:
