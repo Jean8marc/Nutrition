@@ -345,47 +345,113 @@ class DashboardPage(ctk.CTkScrollableFrame):
             'grid.color':       T["bg_el"], 'grid.linestyle': '--', 'grid.alpha': 0.6,
         })
 
-        # ── Courbe poids 30 jours ────────────────────────────────
-        pc = _card(self.charts_row, "⚖️  Poids — 30 derniers jours")
+        # ── Carte progression poids ──────────────────────────────
+        from datetime import datetime as _dt
+        import matplotlib.dates as _mdates
+
+        proj       = db.get_projection_poids()
+        poids_data = db.get_suivi_poids(limit=90, frequence="tous")
+        titre_pc   = "📈  Progression vers l'objectif" if proj.get("has_cible") else "⚖️  Poids — 90 derniers jours"
+        pc = _card(self.charts_row, titre_pc)
         pc.grid(row=0, column=0, padx=(0, 8), sticky="nsew")
 
-        poids_data = db.get_suivi_poids(limit=30, frequence="tous")
         if len(poids_data) >= 2:
             chart_p = ctk.CTkFrame(pc, fg_color="transparent", height=200)
-            chart_p.grid(row=1, column=0, padx=8, pady=(0, 12), sticky="ew")
+            chart_p.grid(row=1, column=0, padx=8, pady=(0, 8), sticky="ew")
             chart_p.grid_propagate(False)
+
+            try:
+                x_hist    = [_mdates.date2num(_dt.strptime(d['date'][:10], "%Y-%m-%d"))
+                               for d in poids_data]
+                _dates_ok = True
+            except ValueError:
+                x_hist    = list(range(len(poids_data)))
+                _dates_ok = False
+            ys = [d['poids'] for d in poids_data]
 
             fig, ax = plt.subplots(figsize=(5, 2.2))
             fig.patch.set_facecolor(T["bg_card"])
-            xs = list(range(len(poids_data)))
-            ys = [d['poids'] for d in poids_data]
-            ax.plot(xs, ys, color=T["blue"], linewidth=2,
+            ax.plot(x_hist, ys, color=T["blue"], linewidth=2,
                     marker="o", markersize=3, markerfacecolor=T["blue_l"])
-            ax.fill_between(xs, ys, [min(ys)-0.5]*len(ys), color=T["blue"], alpha=0.1)
-            user = db.get_current_user()
-            target = float(user.get('poids_cible') or 0)
+            ax.fill_between(x_hist, ys, [min(ys) - 0.5] * len(ys),
+                             color=T["blue"], alpha=0.1)
+
+            # Projection plafonnée à 26 semaines (6 mois) pour la carte compacte
+            if proj.get("has_cible") and proj.get("points") and _dates_ok:
+                pts    = proj["points"][:26]
+                x_proj = [_mdates.date2num(_dt.strptime(p["date"], "%Y-%m-%d")) for p in pts]
+                y_proj = [p["poids"] for p in pts]
+                x_proj = [x_hist[-1]] + x_proj
+                y_proj = [ys[-1]] + y_proj
+                ax.plot(x_proj, y_proj, color=T["ac"], linewidth=1.5,
+                        linestyle="--", alpha=0.85)
+                ax.plot(x_proj[-1], y_proj[-1], marker="*", markersize=8,
+                        color=T["ac"], zorder=5)
+
+            target = proj.get("poids_cible", 0.0)
             if target > 0:
-                ax.axhline(target, color=T["ac"], linewidth=1.2,
-                           linestyle="--", alpha=0.8,
-                           label=f"Objectif {target} kg")
-                ax.legend(fontsize=7, framealpha=0.3,
-                          facecolor=T["bg_el"], labelcolor=T["tx1"])
-            step = max(1, len(poids_data) // 6)
-            lbls = [d['date'][:10] for d in poids_data]
-            ax.set_xticks(xs[::step])
-            ax.set_xticklabels(lbls[::step], rotation=30, fontsize=7)
+                ax.axhline(target, color=T["ac"], linewidth=1.0,
+                           linestyle=":", alpha=0.7)
+
+            if _dates_ok:
+                ax.xaxis.set_major_locator(_mdates.AutoDateLocator(maxticks=6))
+                ax.xaxis.set_major_formatter(_mdates.DateFormatter("%d/%m"))
+                fig.autofmt_xdate(rotation=30)
+            else:
+                step = max(1, len(poids_data) // 6)
+                lbls = [d['date'][:10] for d in poids_data]
+                ax.set_xticks(x_hist[::step])
+                ax.set_xticklabels(lbls[::step], rotation=30, fontsize=7)
+            for tick in ax.xaxis.get_major_ticks():
+                tick.label1.set_fontsize(7)
             ax.set_ylabel("kg", fontsize=8)
             ax.grid(True)
             fig.tight_layout(pad=0.8)
+
             canvas = FigureCanvasTkAgg(fig, master=chart_p)
             canvas.draw()
             canvas.get_tk_widget().pack(fill="both", expand=True)
             plt.close(fig)
+
+            # KPI sous le graphe
+            if proj.get("has_cible"):
+                kpi = ctk.CTkFrame(pc, fg_color="transparent")
+                kpi.grid(row=2, column=0, padx=12, pady=(0, 2), sticky="ew")
+                kpi.grid_columnconfigure((0, 1), weight=1)
+
+                ctk.CTkLabel(kpi,
+                             text=f"{proj['poids_actuel']} kg → {proj['poids_cible']} kg",
+                             font=ctk.CTkFont(size=11, weight="bold"),
+                             text_color=T["tx1"]).grid(row=0, column=0, sticky="w")
+
+                if proj.get("jours_restants") and proj["jours_restants"] > 0:
+                    sem = proj["jours_restants"] // 7
+                    ctk.CTkLabel(kpi, text=f"~{sem} sem.",
+                                 font=ctk.CTkFont(size=11, weight="bold"),
+                                 text_color=T["ac"]).grid(row=0, column=1, sticky="e")
+
+                signe       = "−" if proj["deficit_jour"] < 0 else "+"
+                deficit_abs = abs(int(proj.get("deficit_jour", 0)))
+                source_lbl  = " (prog.)" if proj.get("source") == "programme" else ""
+                ctk.CTkLabel(pc,
+                             text=f"{signe}{deficit_abs} kcal/j{source_lbl}  ·  {proj['kg_par_semaine']:+.2f} kg/sem",
+                             font=ctk.CTkFont(size=10),
+                             text_color=T["tx2"]).grid(
+                    row=3, column=0, padx=12, pady=(0, 10), sticky="w")
+                _spacer(pc, 4)
+            else:
+                ctk.CTkLabel(pc,
+                             text="Définissez un poids cible dans Mon Profil",
+                             font=ctk.CTkFont(size=10),
+                             text_color=T["tx2"]).grid(
+                    row=2, column=0, padx=12, pady=(0, 10))
+                _spacer(pc, 3)
         else:
-            ctk.CTkLabel(pc, text="Enregistrez votre poids\ndans Mon Profil pour voir la courbe",
+            ctk.CTkLabel(pc,
+                         text="Enregistrez votre poids\ndans Mon Profil pour voir la courbe",
                          font=ctk.CTkFont(size=11), text_color=T["tx2"],
                          justify="center").grid(row=1, column=0, pady=30)
-        _spacer(pc, 2)
+            _spacer(pc, 2)
 
         # ── Courbe calories journal 14 jours ─────────────────────
         cc = _card(self.charts_row, "📓  Calories journal — 14 derniers jours")
