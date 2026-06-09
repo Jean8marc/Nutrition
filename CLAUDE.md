@@ -137,7 +137,6 @@ Les features ci-dessous ont été identifiées mais pas encore développées. Nu
 |---|---|---|---|
 | 3 | **Notifications / rappels** | Alertes configurables (hydratation, repas manqués) via `plyer` ou `win10toast` | Moyenne |
 | 8 | **Synchronisation cloud** | Export/import JSON vers endpoint configurable pour sauvegarde distante multi-device | Basse |
-| 16 | **Graphique poids × objectif long terme** | Courbe projetée jusqu'au poids cible (75 kg) avec date estimée d'atteinte, basée sur le déficit calorique moyen réel | Haute |
 | 17 | **Bilan cardiaque dans le rapport** | Ajouter section FC observée (moyenne, max, distribution par zone) dans le rapport hebdomadaire | Moyenne |
 | 18 | **Historique FC dans Sport** | Graphique barres 7j des FC observées par séance, visible en bas de la page Sport | Moyenne |
 
@@ -160,6 +159,7 @@ Les features ci-dessous ont été identifiées mais pas encore développées. Nu
 | 2 | **Rapport hebdomadaire HTML** — `get_rapport_semaine()` DB, `rapport.py` génération HTML pur auto-suffisant, `RapportDialog` sélecteur semaine, boutons depuis Stats et Planning | Session 6 |
 | 19 | **Gestion de stock v1** — table `stock`, 6 fonctions DB, `pages/stock.py`, badges faisabilité Recettes, tri+déduction Planning, alertes Dashboard | Session 7 |
 | 20 | **Gestion de stock v2** — cycle complet : 5 colonnes stock (quantite_min, est_staple, quantite_cible, nb_utilisations, est_eau), `AddToStockDialog`, `show_stock_alert_toast`, bouton 📦 Aliments, bouton "Aliments+Stock" scanner, checkbox déduction Journal, déduction hydratation, toast alertes Planning, liste de courses Stock, alertes seuil Dashboard | Session 8 |
+| 16 | **Graphique poids × objectif long terme** — `get_projection_poids()` DB, courbe projection hebdo + zone ±0.5 kg + étoile dans Profil (axe X en vraies dates), carte Dashboard compacte 90j + KPIs | Session 9 |
 
 ### Recettes & aliments ajoutés (Session 5)
 
@@ -178,3 +178,13 @@ Aliments ajoutés (IDs 71–86) : Filet américain Henry Boucher, Frites surgel�
 | Phở bœuf & os à moelle | 4 | 534 | Bouillon 3h, jarret + bœuf tranché fin, nouilles de riz, 12 ingrédients, 6 étapes, 58g prot/bol |
 
 Aliments ajoutés (IDs 88–96, + Gingembre frais ID 64 déjà existant) : Os à moelle de bœuf, Jarret de bœuf (cru), Bœuf tranché fin (tende de tranche), Nouilles de riz pho (sèches), Anis étoilé (badiane), Sauce poisson (nuoc mam), Germes de soja, Oignon jaune, Oignons verts (cébettes). Note : Os à moelle compté pour 80g (moelle extraite) — les os eux-mêmes sont filtrés et non consommés.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
